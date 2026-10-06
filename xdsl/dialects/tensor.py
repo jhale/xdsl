@@ -304,6 +304,7 @@ class EmptyOp(IRDLOperation):
             printer.print_string("(")
             printer.print_string(")")
 
+        printer.print_op_attributes(self.attributes)
         printer.print_string(" : ")
         printer.print_attribute(self.tensor.type)
 
@@ -322,10 +323,12 @@ class EmptyOp(IRDLOperation):
             dynamic_sizes = parser.resolve_operands(
                 unresolved_dynamic_sizes, unresolved_types, pos
             )
+        attributes = parser.parse_optional_attr_dict()
         parser.parse_punctuation(":")
         result_type = parser.parse_attribute()
 
         empty = cls(dynamic_sizes, result_type)
+        empty.attributes |= attributes
 
         return empty
 
