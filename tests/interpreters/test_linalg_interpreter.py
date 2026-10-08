@@ -12,6 +12,8 @@ from xdsl.dialects.builtin import (
     DenseArrayBase,
     DenseIntOrFPElementsAttr,
     FloatAttr,
+    IndexType,
+    IntegerAttr,
     MemRefType,
     ModuleOp,
     StringAttr,
@@ -29,6 +31,7 @@ from xdsl.interpreters.shaped_array import ShapedArray
 from xdsl.interpreters.utils.ptr import TypedPtr
 from xdsl.ir import Block, Region
 from xdsl.ir.affine import AffineExpr, AffineMap
+from xdsl.utils.exceptions import InterpretationError
 from xdsl.utils.test_value import create_ssa_value
 
 
@@ -161,6 +164,44 @@ def test_linalg_generic_scalar():
     interpreter.run_op(op, (a, b, c))
 
     assert c.data == [2, 4, 6, 8, 10, 12]
+
+
+def test_linalg_generic_index():
+    interpreter = Interpreter(ModuleOp([]))
+    interpreter.register_implementations(LinalgFunctions())
+    interpreter.register_implementations(ArithFunctions())
+
+    op = linalg.ops.GenericOp(
+        (),
+        (create_ssa_value(MemRefType(i32, [2, 3])),),
+        Region(Block(arg_types=(i32,))),
+        (AffineMapAttr(AffineMap.identity(2)),),
+        (
+            linalg.attrs.IteratorTypeAttr.parallel(),
+            linalg.attrs.IteratorTypeAttr.parallel(),
+        ),
+    )
+
+    with ImplicitBuilder(op.body):
+        i = linalg.ops.IndexOp(0).result
+        j = linalg.ops.IndexOp(1).result
+        ten = arith.ConstantOp(IntegerAttr(10, IndexType())).result
+        value = arith.AddiOp(arith.MuliOp(i, ten).result, j).result
+        linalg.ops.YieldOp(arith.IndexCastOp(value, i32).result)
+
+    c = ShapedArray(TypedPtr.new_int32([-1] * 6), [2, 3])
+
+    interpreter.run_op(op, (c,))
+
+    assert c.data == [0, 1, 2, 10, 11, 12]
+
+
+def test_linalg_index_outside_structured_op():
+    interpreter = Interpreter(ModuleOp([]))
+    interpreter.register_implementations(LinalgFunctions())
+
+    with pytest.raises(InterpretationError, match="body of a structured op"):
+        interpreter.run_op(linalg.ops.IndexOp(0), ())
 
 
 @pytest.mark.parametrize("tensor", [False, True])

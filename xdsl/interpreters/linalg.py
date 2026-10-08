@@ -13,6 +13,10 @@ from xdsl.interpreter import (
     register_impls,
 )
 from xdsl.interpreters.shaped_array import ShapedArray
+from xdsl.utils.exceptions import InterpretationError
+
+# The iteration indices of the structured ops being run, innermost last.
+LOOP_INDICES = "linalg.loop_indices"
 
 
 def run_linalg_structured_op(
@@ -56,6 +60,7 @@ def run_linalg_structured_op(
     loop_ranges = op.get_shapes_to_loops_map().eval(runtime_shapes, [])
 
     output_indexing_maps = indexing_maps[inputs_count:]
+    loop_indices = interpreter.get_data(LinalgFunctions, LOOP_INDICES, list)
 
     for indices in product(*(range(loop_range) for loop_range in loop_ranges)):
         loop_scalar_args = tuple(
@@ -66,7 +71,13 @@ def run_linalg_structured_op(
             )
             for i, indexing_map in zip(loop_shaped_args, indexing_maps, strict=True)
         )
-        loop_results = interpreter.run_ssacfg_region(body, loop_scalar_args, "for_loop")
+        loop_indices.append(indices)
+        try:
+            loop_results = interpreter.run_ssacfg_region(
+                body, loop_scalar_args, "for_loop"
+            )
+        finally:
+            loop_indices.pop()
         for res, indexing_map in zip(loop_results, output_indexing_maps, strict=True):
             result_indices = indexing_map.eval(indices, ())
             outputs[0].store(result_indices, res)
@@ -85,6 +96,17 @@ class LinalgFunctions(InterpreterFunctions):
                 "library_call not yet supported in linalg.generic interpreter"
             )
         return run_linalg_structured_op(interpreter, op, args)
+
+    @impl(linalg.ops.IndexOp)
+    def run_index(
+        self, interpreter: Interpreter, op: linalg.ops.IndexOp, args: tuple[Any, ...]
+    ) -> PythonValues:
+        loop_indices = interpreter.get_data(LinalgFunctions, LOOP_INDICES, list)
+        if not loop_indices:
+            raise InterpretationError(
+                "linalg.index must be run in the body of a structured op"
+            )
+        return (loop_indices[-1][op.dim.value.data],)
 
     @impl_terminator(linalg.ops.YieldOp)
     def run_yield(
