@@ -24,7 +24,7 @@ dependencies = [
   "typing-extensions>=4.13,<5",
 ]
 optional-dependencies.dev = [
-  "basedpyright==1.40.1",
+  "basedpyright==1.40.2",
   "coverage<8",
   "filecheck==1.0.6",
   "lit<19",
@@ -33,7 +33,7 @@ optional-dependencies.dev = [
   "pytest<9.2",
   "pytest-asyncio",
   "pytest-cov",
-  "ruff==0.16.9",
+  "ruff==0.16.10",
   "sympy==1.14",
   "textual-dev==1.8",
   "toml<0.11",
