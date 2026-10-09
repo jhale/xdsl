@@ -24,11 +24,11 @@
                 mlir_xdsl.mlir
                 mlir_xdsl.tblgen
               ];
-              LLVM_SYMBOLIZER_PATH = "${llvmPackages_23.llvm}/bin/llvm-symbolizer";
-              XDSL_MLIR_OPT = "${llvmPackages_23.mlir}/bin/mlir-opt";
-              XDSL_MLIR_TRANSLATE = "${llvmPackages_23.mlir}/bin/mlir-translate";
-              XDSL_LLVM_DIFF = "${llvmPackages_23.llvm}/bin/llvm-diff";
-              XDSL_LLI = "${llvmPackages_23.llvm}/bin/lli";
+              LLVM_SYMBOLIZER_PATH = "${mlir_xdsl.llvm}/bin/llvm-symbolizer";
+              XDSL_MLIR_OPT = "${mlir_xdsl.mlir}/bin/mlir-opt";
+              XDSL_MLIR_TRANSLATE = "${mlir_xdsl.mlir}/bin/mlir-translate";
+              XDSL_LLVM_DIFF = "${mlir_xdsl.llvm}/bin/llvm-diff";
+              XDSL_LLI = "${mlir_xdsl.llvm}/bin/lli";
             };
           }
     );
